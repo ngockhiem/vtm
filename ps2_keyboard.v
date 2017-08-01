@@ -1,5 +1,6 @@
 module ps2_keyboard(
-  clk,          
+  clk,
+  rst_n,
   ps2_clk,      
   ps2_data,     
   ps2_code_new, 
@@ -10,6 +11,7 @@ module ps2_keyboard(
   parameter debounce_counter_size 8;
   parameter range clk_freq/18000;
   input clk;
+  input rst_n;
   input ps2_clk;
   input ps2_data;
   output ps2_code_new;
@@ -37,20 +39,30 @@ debounce debounce_1_unit(
   );
   
 
-  always@(posedge clk)
-    begin
-      sync_ffs(0) <= ps2_clk;  
-      sync_ffs(1) <= ps2_data; 
-    end
+  always@(posedge clk or negedge rst_n)
+    if (!rst_n)
+      sync_ffs=2'b0;
+    else 
+      begin
+        sync_ffs[0] <= ps2_clk;  
+        sync_ffs[1] <= ps2_data; 
+      end
 
-  always@(posedge clk)
-    ps2_clk_int <= ps2_clk_int_next;
+  always@(posedge clk or negedge rst_n)
+    if (!rst_n)
+      ps2_clk_int<=1'b1;
+    else
+      ps2_clk_int <= ps2_clk_int_next;
   
   assign ps2_clk_en = ~ps2_clk_int_next|ps2_clk_int;
   
-  always@(posedge clk)
+  always@(posedge clk or negedge rst_n)
+    if (!rst_n)
+      ps2_word<=10'b0;
     if (ps2_clk_en)
       ps2_word <= {ps2_word[10:1],ps2_data_int};
+    else 
+      ps2_word<=ps2_word;
   
-  always@(posedge clk)
+  always@(posedge clk or negedge rst_n)
     
